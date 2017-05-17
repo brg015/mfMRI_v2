@@ -17,7 +17,7 @@ if strcmp(SL.design.calc{ii},'Spear') || strcmp(SL.design.calc{ii},'Euclid') ...
         case 'Mean',    outval(SL.analysis.multi_boot+1)=mean(v2(v1==1));
     end
     out_array{1}=outval(SL.analysis.multi_boot+1);
-    out_index={'Key'};
+    out_index{1}=[SL.design.save_str{ii} '_key'];
 end
 % 
 switch SL.design.calc{ii}  
@@ -34,20 +34,13 @@ end
 % Write to searchlight volumes
 %=========================================================================%
 % Update 12/10 for 4D volumes
+% Updated 5/17/17 for custom models
 if SL.region.noSL==0
     % Do Stuff
     try
         % Note* if out is set, and out_index is never updated, then this
         % loop is never hit and thus 'out' is fine
-        for jj=1:length(out_index)
-            if isnumeric(out_index{jj})
-                out{out_index{jj}}.mat(vox,:)=out_array{jj};
-            elseif strcmp(out_index{jj},'Key')
-                out{ii}.mat(vox,:)=out_array{jj};
-            else
-                out{strcmp(out_index{jj},out_name)}.mat(vox,:)=out_array{jj};
-            end
-        end
+        for jj=1:length(out_index), out{strcmp(out_index{jj},out_name)}.mat(vox,:)=out_array{jj}; end
     catch err
         display('Error writing volumes in RSA_bootstrap');
         keyboard;
