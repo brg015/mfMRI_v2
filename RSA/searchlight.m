@@ -139,6 +139,7 @@ end
 SL.files=[];
 QA_dir=fullfile(SL.dir.outpath,SL.dir.QA,filesep);
 QA_subj=fullfile(QA_dir,SL.dir.subjects{cursub});
+if ~exist(QA_subj,'dir'), mkdir(QA_subj); end
 save(fullfile(QA_subj,'SL.mat'),'SL');
 
 if (SL.region.noSL==0)
