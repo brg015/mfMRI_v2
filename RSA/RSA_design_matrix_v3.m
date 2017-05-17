@@ -138,6 +138,7 @@ if strcmp(SL.design.calc{ii},'Identity1')
         SL.design.anova{ii}.row=0;
     end
 end     
+
 if strcmp(SL.design.calc{indx},'Identity1');
     SL.design.anova{ii}.f{1}=SL.design.anova{ii}.f{1}.*SL.design.matrix{ii};
     SL.design.anova{ii}.f{2}=SL.design.anova{ii}.f{2}.*SL.design.matrix{ii};
@@ -158,6 +159,7 @@ if strcmp(SL.design.calc{indx},'Identity1');
                     A2(MposR(jj),MposC)=1;
         end
         A2=A2-A1; % Remove identity
+        A2=A2.*SL.design.anova{ii}.f{2}; % Multiply by off matrix
         SL.design.anova{ii}.fIon{jj}=reshape(A1,1,[]);
         SL.design.anova{ii}.fIof{jj}=reshape(A2,1,[]);
         % clear A1 A2;
