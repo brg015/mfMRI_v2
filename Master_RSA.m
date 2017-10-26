@@ -16,7 +16,11 @@ clc; clear all;
 global SL;
 
 % Update log
-% 3/28/2016 -> added comments and fixed custom models
+% 3/28/2016  -> added comments and fixed custom models
+% 6/23/2017  -> code for distance computations and SVM classifier
+%            * still needs better documentation
+% 10/26/2017 -> added code for multiple RDMs
+%            * QA doesn't work with this yet             
 %=========================================================================%
 %% Add paths
 %=========================================================================%
@@ -28,7 +32,7 @@ switch OP
     case 'serv1', root_dir='D:\Data\';
 end
 wrk_dir=fullfile(root_dir,'\Wing\ERMatch_serv1\');
-code_dir{1}=fullfile(root_dir,'Geib\Scripts\Public\mfMRI_v2');
+code_dir{1}=fullfile(wrk_dir,'\MultipleRDMs\mfMRI_v2-master\');
 code_dir{2}=fullfile(root_dir,'Geib\Scripts\Public\SPM\spm8\');
 code_dir{3}=fullfile(root_dir,'Geib\Scripts\Public\SPM\xjview\');
 code_dir{4}=fullfile(root_dir,'Geib\Scripts\Public\function_files');
@@ -47,16 +51,16 @@ end
 %                           output (still testing...)
 %   .QA (string)         => Quality assurance directory
 SL.dir.stpath = fullfile(wrk_dir,'STwa\');
-SL.dir.subjects={'13100'}; % '13205' '13220' '13448' '13491' ...
-%     '13510' '13523' '13549' '13552' '13562' ...
-%     '13617' '13655' '13658' '13683' '13693' ...
-%     '13720' '13743' '13779' '13793' '13807' ...
-%     '13845'};
+SL.dir.subjects={'13100' '13205' '13220' '13448' '13491' ...
+    '13510' '13523' '13549' '13552' '13562' ...
+    '13617' '13655' '13658' '13683' '13693' ...
+    '13720' '13743' '13779' '13793' '13807' ...
+    '13845'};
 SL.dir.outpath =  fullfile(wrk_dir,'\testing\');
 SL.dir.overwrite=1;
 
 SL.dir.QA='QA'; 
-SL.dir.QAcheck=1;
+SL.dir.QAcheck=0;
 
 %*Expected directory of 1st SPM.mat file is...
 %  SPM=fullfile(SL.dir.stpath,SL.dir.subjects{1},'SPM.mat');
@@ -166,8 +170,7 @@ end
 %                         most common is 'Identity1'
 %       Identity1 => examines the difference between identical items and
 %                    mismatched items
-%           .interactions{X}=[a b; c d]   => conditions to include the
-%            model in a row column format.
+%           .interactions{X}=[a b; c d]   => conditions to include the model in a row column format.
 %           .save_str{#} (string)         => name of model for output
 %           .custom(#) (logical)          => 0
 %           .Identity1{#}.regress.on (logical)=> 0 (in testing atm)
@@ -176,11 +179,15 @@ end
 %           .Identity1{#}.diag=[a,b]          => defines the on diag cells
 %           .Identity1{#}.row (logical)       => zscore rows (2=both,1=row,0=col)
 %           .Identity1{#}.FourD (logical)     => save 4D output
-%       Spear, Euclid or Kendall => for custom models only
+%       Spear, Euclid, Mean or Kendall => for custom models only
 %           .interactions{X}              => same as above
 %           .save_str{#}                  => same as above
 %           .custom(#)=1                  => says to include custom model
-%
+%       MRegression => for custom models only
+%           .interactions{X}              => same as above
+%           .save_str{#}                  => same as above
+%           .custom(#)=1                  => says to include custom model
+%           .ortho(#)=1                   => says to orthogonalize to first model    
 %   .model{X} (file string)               => indicates data file to load
 %       *loaded data file should be a .mat with 2 variables R &
 %       stim_ID_num. R is a cross correlation matrix. stim_ID_num maps the
@@ -190,34 +197,60 @@ end
 %           design.interactions{X} => cells to compute average over
 %           design.save_str{X}     => name of the output volume
 %           custom(X)              => ==1 if design is a custom matrix
+%       *if MRegression then this should be a cell list of models
 %=========================================================================%
 %% Examples of all three models
 %=========================================================================%
 model=1;
-SL.design.calc{model}='Identity1';
-SL.design.interactions{model}=[3 1; 3 2; 4 1; 4 2];
-SL.design.save_str{model}=['ERS'];
-SL.design.custom(model)=0;
-SL.design.Identity1{model}.regress.on=0;
-SL.design.Identity1{model}.type='Identity1';
-SL.design.Identity1{model}.names={'On' 'Off'};
-SL.design.Identity1{model}.diag=[3 1; 4 2]; %index to cross-phase ID diagonal containing block cells 
-SL.design.Identity1{model}.row=1;
-SL.design.Identity1{model}.FourD=1;
-model=model+1;
-
-SL.design.calc{model}='Anova1';
-SL.design.interactions{model}=[1 1; 2 1; 2 2];
-SL.design.save_str{model}='Encoding';
-SL.design.custom(model)=0;
-model=model+1;
-
+% SL.design.calc{model}='Identity1';
+% SL.design.interactions{model}=[3 1; 3 2; 4 1; 4 2];
+% SL.design.save_str{model}=['ERS'];
+% SL.design.custom(model)=0;
+% SL.design.Identity1{model}.regress.on=0;
+% SL.design.Identity1{model}.type='Identity1';
+% SL.design.Identity1{model}.names={'On' 'Off'};
+% SL.design.Identity1{model}.diag=[3 1; 4 2]; %index to cross-phase ID diagonal containing block cells 
+% SL.design.Identity1{model}.row=1;
+% SL.design.Identity1{model}.FourD=1;
+% model=model+1;
+% 
+% SL.design.calc{model}='Anova1';
+% SL.design.interactions{model}=[1 1; 2 1; 2 2];
+% SL.design.save_str{model}='Encoding';
+% SL.design.custom(model)=0;
+% model=model+1;
+% 
 SL.design.calc{model}='Spear';
 SL.design.model{model}=['D:\Data\Wing\ERMatch_serv1\RSA_models\features\model.mat'];
 SL.design.interactions{model}=combn(1:4,2);
 SL.design.save_str{model}='Enc_Spear';
 SL.design.custom(model)=1;
 model=model+1; 
+
+SL.design.calc{model}='MRegression';
+SL.design.model{model}={'D:\Data\Wing\ERMatch_serv1\RSA_models\VGG16_Places_mat_files\model_layer_nan_3.mat',...
+    'D:\Data\Wing\ERMatch_serv1\RSA_models\VGG16_Places_mat_files\model_layer_nan_11.mat',...
+    'D:\Data\Wing\ERMatch_serv1\RSA_models\VGG16_Places_mat_files\model_layer_nan_21.mat',...
+    'D:\Data\Wing\ERMatch_serv1\RSA_models\VGG16_Places_mat_files\model_layer_nan_26.mat'};
+SL.design.interactions{model}=combn(1:4,2);
+SL.design.save_str{model}='Enc_VGG_Spear';
+SL.design.ortho(model)=1; % This doesn't work
+SL.design.custom(model)=1;
+model=model+1; 
+
+% Beta phase models...
+SL.design.calc{model}='distance';
+SL.design.distance{model}='euclidean';
+SL.design.save_str{model}='euclidean';
+SL.design.class{model}=[1 2];
+SL.design.custom(model)=0;
+model=model+1;
+
+SL.design.calc{model}='MVPA';
+SL.design.save_str{model}='MVPA';
+SL.design.class{model}=[1 2];
+SL.design.custom(model)=0;
+model=model+1;
 
 RSA_shell_v2;
 %=========================================================================%
