@@ -1,4 +1,4 @@
-function RSA_shell_v2()
+function RSA_shell_plearn_SL()
 %=========================================================================%
 %% Code Setup
 %=========================================================================%
@@ -255,7 +255,7 @@ for cursub = 1:length(SL.dir.subjects)
     else % Natural searchlight zone
         [SL.LOC] = vect_sl_locations(SPM,SL);  
         SL.analysis.loop=randperm(length(SL.LOC));
-        tic; searchlight(SL.dir.subjects{cursub},cursub); toc
+        tic; searchlight_plearn(SL.dir.subjects{cursub},cursub); toc
     end
     
     catch err

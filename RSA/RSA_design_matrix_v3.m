@@ -11,6 +11,7 @@
 %       SL.design.matrix
 %
 % Updated 4/9/17
+% Updated 10/26/2017 for multiple regression (MR) models
 function RSA_design_matrix_v3(indx)
 global SL;
 %=========================================================================%
@@ -18,20 +19,30 @@ global SL;
 %=========================================================================%
 Box=SL.design.Box;
 % If no interactions or weights are setup, include all of them, set 
-if isempty(SL.design.interactions{indx}),
+if isempty(SL.design.interactions{indx})
     SL.design.interactions{indx}=combn(1:length(SL.design.cond_str),2);
 end
-% Setup the design matrix (items to include*)
-SL.design.matrix{indx}=nan(sum(Box));
 
-if SL.design.custom(indx)==1        
-    load(SL.design.model{indx}); % Models should be saved as R vars        
-        % Based upon the items saved in the model, we adjust the
-        % model to align with the subjects data and remove data
-        % that is not included for the given subject
-    if ~exist('stim_ID_num','var') || ~exist('R','var'),
-        keyboard;
-    end  
+CRN=1; % default is to say we got one model
+if SL.design.custom(indx)==1   
+    % Regular model
+    if ~iscell(SL.design.model{indx})
+        SL.design.matrix{indx}=nan(sum(Box));
+        CR{1}=load(SL.design.model{indx}); % Models should be saved as R vars        
+            % Based upon the items saved in the model, we adjust the
+            % model to align with the subjects data and remove data
+            % that is not included for the given subject
+    % Multiple regression model
+    else
+        CRN=length(SL.design.model{indx}); % Many matrices
+        for ii=1:length(SL.design.model{indx})
+            CR{ii}=load(SL.design.model{indx}{ii}); % Custom R
+            SL.design.matrix{indx}{ii}=nan(sum(Box));
+        end
+    end
+else
+    % Setup the design matrix (items to include*)
+    SL.design.matrix{indx}=nan(sum(Box));
 end
 cBox=cumsum(Box);
 %=========================================================================%
@@ -77,49 +88,92 @@ for ii=1:size(SL.design.interactions{indx},1)
     % Arrange custom design matrices
     %=====================================================================%
     elseif SL.design.custom(indx)==1
-        % Loop through all positions
-        if isequal(stim_ID_num,SL.design.ID_idx)
-            SL.design.matrix{indx} = R;
-        else
-            for x=r
-                for y=c
-                    SL.design.matrix{indx}(x,y)=...
-                        R(stim_ID_num==SL.design.ID_idx(x),...
-                        stim_ID_num==SL.design.ID_idx(y));
+        % Loop through all positions - this has become a bit kludgy with
+        % the inclusion of multiple regression, but trying to keep the code
+        % as similar as possible for the original analysis to avoid any
+        % propogating erros
+        for NN=1:CRN
+            if isequal(CR{NN}.stim_ID_num,SL.design.ID_idx)
+                if CRN==1
+                    SL.design.matrix{indx} = CR{NN}.R;
+                else
+                    SL.design.matrix{indx}{NN}= CR{NN}.R;
+                end
+            else
+                if CRN==1
+                    for x=r
+                        for y=c
+                            SL.design.matrix{indx}(x,y)=...
+                                CR{NN}.R(CR{NN}.stim_ID_num==SL.design.ID_idx(x),...
+                                CR{NN}.stim_ID_num==SL.design.ID_idx(y));
+                        end
+                    end
+                else
+                     for x=r
+                        for y=c
+                            SL.design.matrix{indx}{NN}(x,y)=...
+                                CR{NN}.R(CR{NN}.stim_ID_num==SL.design.ID_idx(x),...
+                                CR{NN}.stim_ID_num==SL.design.ID_idx(y));
+                        end
+                    end
                 end
             end
         end
     end
 end
-% Parameter is really only pertinent to continous models...
-SL.design.power{indx}=sum(SL.design.matrix{indx}(~isnan(SL.design.matrix{indx}))/2);
+% Parameter is really only pertinent to continous models and isn't used
+% anywehre else, so ensuring when this breaks for MR models that it doesn't
+% halt the script
+try
+    SL.design.power{indx}=sum(SL.design.matrix{indx}(~isnan(SL.design.matrix{indx}))/2);
+catch err
+    SL.design.power{indx}=0;
+end
 
 %=========================================================================%
 % Remove the diagnol
 %=========================================================================%
-SL.design.matrix{indx}=tril(SL.design.matrix{indx},-1);
-nan_idx=tril(ones(length(SL.design.matrix{indx})),-1)==0;
-SL.design.matrix{indx}(nan_idx)=nan;
-if SL.run.include==1
-    % Within run comparisons set to NaN
-    SL.design.matrix{indx}(SL.run.matrix==1)=NaN;
-elseif SL.run.include==2
-    % Between run comparisons set to NaN
-    SL.design.matrix{indx}(SL.run.matrix==0)=NaN;
-end
+if CRN==1
+    % This is the standard for most models
+    SL.design.matrix{indx}=tril(SL.design.matrix{indx},-1);
+    nan_idx=tril(ones(length(SL.design.matrix{indx})),-1)==0;
+    SL.design.matrix{indx}(nan_idx)=nan;
+    if SL.run.include==1
+        % Within run comparisons set to NaN
+        SL.design.matrix{indx}(SL.run.matrix==1)=NaN;
+    elseif SL.run.include==2
+        % Between run comparisons set to NaN
+        SL.design.matrix{indx}(SL.run.matrix==0)=NaN;
+    end
 
-if strcmp(SL.design.calc{indx},'Identity1');
-    if isfield(SL.design.anova{indx},'f')
-        for jj=1:length(SL.design.anova{indx}.f)
-            SL.design.anova{indx}.f{jj}(nan_idx)=0; % Anova map, so ==0 
-            if SL.run.include==1, SL.design.anova{indx}.f{jj}(SL.run.matrix==1)=0; end
-            
-            if std(std(SL.design.anova{indx}.f{jj}))==0
-                SL.design.anova{indx}.f{jj}=[];
-                display('Warning: Anova Matrices have no variability, removing');
+    if strcmp(SL.design.calc{indx},'Identity1');
+        if isfield(SL.design.anova{indx},'f')
+            for jj=1:length(SL.design.anova{indx}.f)
+                SL.design.anova{indx}.f{jj}(nan_idx)=0; % Anova map, so ==0 
+                if SL.run.include==1, SL.design.anova{indx}.f{jj}(SL.run.matrix==1)=0; end
+
+                if std(std(SL.design.anova{indx}.f{jj}))==0
+                    SL.design.anova{indx}.f{jj}=[];
+                    display('Warning: Anova Matrices have no variability, removing');
+                end
             end
+            SL.design.anova{indx}.f=SL.design.anova{indx}.f(~cellfun('isempty',SL.design.anova{indx}.f));
         end
-        SL.design.anova{indx}.f=SL.design.anova{indx}.f(~cellfun('isempty',SL.design.anova{indx}.f));
+    end
+else
+    % For MR models only
+    for NN=1:CRN
+         % This is the standard for most models
+        SL.design.matrix{indx}{NN}=tril(SL.design.matrix{indx}{NN},-1);
+        nan_idx=tril(ones(length(SL.design.matrix{indx}{NN})),-1)==0;
+        SL.design.matrix{indx}{NN}(nan_idx)=nan;
+        if SL.run.include==1
+            % Within run comparisons set to NaN
+            SL.design.matrix{indx}{NN}(SL.run.matrix==1)=NaN;
+        elseif SL.run.include==2
+            % Between run comparisons set to NaN
+            SL.design.matrix{indx}{NN}(SL.run.matrix==0)=NaN;
+        end
     end
 end
 %=========================================================================%

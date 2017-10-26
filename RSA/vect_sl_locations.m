@@ -7,9 +7,8 @@ switch SL.region.use_mask
     case 0
         file_template=SPM.Vbeta(1).fname;
     case 1
-        file_template=SL.region.mask;
+        file_template=SL.region.mask{1};
 end
-
 brain_data = spm_read_vols(spm_vol(file_template));
 [x,y,z] = size(brain_data);
 LOC = struct('voi',cell(1),'box',zeros(SL.design.SSL^3,1));

@@ -1,4 +1,4 @@
-function [out] = searchlight(subject,cursub)
+function [out] = searchlight_plearn(subject,cursub)
 global SL;
 %=========================================================================%
 %% RSA Style Searchligth
@@ -28,6 +28,7 @@ global SL;
 % changed, the two scripts can no longer talk.
 %=========================================================================%
 if (SL.region.noSL==0 && SL.skip_maps==0) %commented out for ROI
+    keyboard;
     [out,out_name]=RSA_output_maps_v2(subject);
     if SL.err==1, SL.err=0; return; end
 else % End of making output maps (needed for searchlight)

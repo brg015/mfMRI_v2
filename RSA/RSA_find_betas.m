@@ -73,7 +73,7 @@ for ii=1:length(SPM.Vbeta)
 end
 
 %========================%
-% DRM Hack - too hard to integrate
+% DRM Hack - too hard to integrateSP
 %========================%
 if SL.ID.check==2
     RSA_find_betas_hemi(descrip_match,ID_code,SPM,subject,data_dir);
