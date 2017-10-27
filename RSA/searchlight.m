@@ -136,11 +136,13 @@ end
 %% Searchlight Data
 %=========================================================================%
 % Save DataMap
-SL.files=[];
-QA_dir=fullfile(SL.dir.outpath,SL.dir.QA,filesep);
-QA_subj=fullfile(QA_dir,SL.dir.subjects{cursub});
-if ~exist(QA_subj,'dir'), mkdir(QA_subj); end
-save(fullfile(QA_subj,'SL.mat'),'SL');
+if SL.region.use_mask==0, 
+    SL.files=[]; 
+    QA_dir=fullfile(SL.dir.outpath,SL.dir.QA,filesep);
+    QA_subj=fullfile(QA_dir,SL.dir.subjects{cursub});
+    if ~exist(QA_subj,'dir'), mkdir(QA_subj); end
+    save(fullfile(QA_subj,'SL.mat'),'SL');
+end
 
 if (SL.region.noSL==0)
     fprintf(strcat('....Saving for\t',subject,'\n'));

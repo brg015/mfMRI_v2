@@ -7,7 +7,9 @@ switch SL.region.use_mask
     case 0
         file_template=SPM.Vbeta(1).fname;
     case 1
-        file_template=SL.region.mask{1};
+        % Changed 10/27/2017 from a cell call - which somehow worked until
+        % now?
+        file_template=SL.region.mask;
 end
 brain_data = spm_read_vols(spm_vol(file_template));
 [x,y,z] = size(brain_data);

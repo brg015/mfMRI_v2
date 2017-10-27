@@ -35,20 +35,9 @@ for ii=1:N_design
             for jj=1:length(SL.design.matrix{ii})
                 % Setup output maps for each beta image
                 [~,nam,~]=fileparts(SL.design.model{ii}{jj});
-                SL.design.MRname{ii}{jj}=[SL.design.save_str{ii} '_' nam '_key'];
                 out{M+jj}.mat=nan(prod(SL.V.dim),1);  
                 out{M+jj}.name=[SL.design.save_str{ii} '_' nam '_key'];
-                V(:,jj)=reshape(SL.design.matrix{ii}{jj},1,[]);
             end
-            % Now, let's make linear vectors for each feature while
-            % ignoring NaNs
-            V=V(~isnan(sum(V')),:);
-            if SL.design.ortho(ii)==1
-               % Ortho V to the first column 
-               % Not yet implemented
-            end
-            SL.design.MR{ii}=V;
-            clear V;
         otherwise % Assumes custom model
             out{M+1}.mat=nan(prod(SL.V.dim),1);  
             out{M+1}.name=[SL.design.save_str{ii} '_key'];

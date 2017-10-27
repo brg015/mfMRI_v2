@@ -219,7 +219,31 @@ if strcmp(SL.design.calc{indx},'Identity1');
         % clear A1 A2;
     end % length is identical for each MposC & MposC
     
-end        
+end       
+
+%=========================================================================%
+% Extra processing for MR models
+%=========================================================================%
+if strcmp(SL.design.calc{indx},'MRegression')
+    
+for jj=1:length(SL.design.matrix{indx})
+    % Setup output maps for each beta image
+    [~,nam,~]=fileparts(SL.design.model{indx}{jj});
+    SL.design.MRname{indx}{jj}=[SL.design.save_str{indx} '_' nam '_key'];
+    V(:,jj)=reshape(SL.design.matrix{indx}{jj},1,[]);
+end
+% Now, let's make linear vectors for each feature while
+% ignoring NaNs
+V=V(~isnan(sum(V')),:);
+if SL.design.ortho(indx)==1
+    keyboard;
+    % Ortho V to the first column 
+    % Not yet implemented
+end
+SL.design.MR{ii}=V;
+clear V;
+
+end
 %=========================================================================%
 % Set regress inputs if needed (for identity1)
 %=========================================================================%
